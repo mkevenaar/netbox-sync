@@ -1314,6 +1314,7 @@ class NBCustomField(NetBoxObject):
             "type": ["text", "longtext", "integer", "boolean", "date", "url", "json", "select", "multiselect", "object", "multi-object"],
             "name": 50,
             "label": 50,
+            "group_name": 50,
             "description": 200,
             "required": bool,
             "default": str,

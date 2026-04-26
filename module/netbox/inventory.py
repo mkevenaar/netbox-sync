@@ -124,6 +124,17 @@ class NetBoxInventory:
 
         # try to find by primary/secondary key
         elif data.get(object_type.primary_key) is not None:
+            # NetBox 4.2 changed clusters from site->scope; matching only by name avoids
+            # false negatives when one side has 'site' and the other has only 'scope_id'.
+            if object_type == NBCluster:
+                cluster_name_to_find = str(data.get(object_type.primary_key)).lower()
+                for this_object in self.get_all_items(object_type):
+                    this_cluster_name = this_object.data.get(object_type.primary_key)
+                    if this_cluster_name is None:
+                        continue
+                    if str(this_cluster_name).lower() == cluster_name_to_find:
+                        return this_object
+
             object_name_to_find = None
             for this_object in self.get_all_items(object_type):
 

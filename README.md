@@ -5,6 +5,7 @@ This is a tool to sync data from different sources to a NetBox instance.
 
 Available source types:
 * VMware vCenter Server
+* Proxmox VE
 * [bb-ricardo/check_redfish](https://github.com/bb-Ricardo/check_redfish) inventory files
 
 **IMPORTANT: READ INSTRUCTIONS CAREFULLY BEFORE RUNNING THIS PROGRAM**
@@ -35,6 +36,7 @@ This ensures stale objects are removed from NetBox keeping an accurate current s
 * urllib3==2.2.1
 * wheel
 * requests==2.31.0
+* proxmoxer==2.2.0
 * pyvmomi==8.0.2.0.1
 * aiodns==3.0.0
 * pyyaml==6.0.1
@@ -80,6 +82,13 @@ The `vsphere-automation-sdk` must be installed if tags should be synced from vCe
 * assuming we are still in an activated virtual env
 ```shell
 pip install --upgrade git+https://github.com/vmware/vsphere-automation-sdk-python.git
+```
+
+### Proxmox support (if necessary)
+The `proxmoxer` must be installed to use Proxmox as a source
+* assuming we are still in an activated virtual env
+```shell
+pip install proxmoxer==2.2.0
 ```
 
 ## NetBox API token
@@ -293,6 +302,7 @@ Program will exit if all retries failed!
 ## Supported sources
 Check out the documentations for the different sources
 * [vmware](https://github.com/bb-Ricardo/netbox-sync/blob/main/docs/source_vmware.md)
+* [proxmox](https://github.com/bb-Ricardo/netbox-sync/blob/main/docs/source_proxmox.md)
 * [check_redfish](https://github.com/bb-Ricardo/netbox-sync/blob/main/docs/source_check_redfish.md)
 
 If you have multiple vCenter instances or check_redfish folders just add another source with the same type

@@ -533,12 +533,31 @@ class NetBoxHandler:
                 currently_existing_ids = [x.get("id") for x in brief_nb_data.get("results")]
                 changed_ids = [x.get("id") for x in updated_nb_data.get("results")]
 
-                for this_object in cached_nb_data:
+                cached_ids = [x.get("id") for x in cached_nb_data if x.get("id") is not None]
+                missing_cached_ids = sorted(set(currently_existing_ids) - set(cached_ids) - set(changed_ids))
 
-                    if this_object.get("id") in currently_existing_ids and this_object.get("id") not in changed_ids:
-                        nb_objects.append(this_object)
+                # Cache can become incomplete after config/source changes or older cache formats.
+                # If IDs exist in NetBox but are missing from both cache and delta, rebuild this class cache.
+                if len(missing_cached_ids) > 0:
+                    log.info(f"Detected {len(missing_cached_ids)} cached {nb_object_class.name}%s missing from "
+                             "NetBox inventory delta. Rebuilding this cache class." %
+                             plural(len(missing_cached_ids)))
+                    full_nb_data = self.request(nb_object_class)
 
-                nb_objects.extend(updated_nb_data.get("results"))
+                    if full_nb_data.get("results") is None:
+                        log.error(f"Result data from NetBox for object {nb_object_class.__name__} missing!")
+                        do_error_exit("Reading data from NetBox failed.")
+
+                    nb_objects = full_nb_data.get("results")
+
+                else:
+                    for this_object in cached_nb_data:
+
+                        if this_object.get("id") in currently_existing_ids and \
+                                this_object.get("id") not in changed_ids:
+                            nb_objects.append(this_object)
+
+                    nb_objects.extend(updated_nb_data.get("results"))
 
             if self.settings.use_caching is True:
                 try:
@@ -694,6 +713,32 @@ class NetBoxHandler:
                     nb_id = this_object.nb_id
                     req_type = "PATCH"
                     action = "Updating"
+                elif nb_object_sub_class == NBCluster and data_to_patch.get("name") is not None:
+                    lookup_params = {
+                        "name": data_to_patch.get("name"),
+                        "brief": 1,
+                        "limit": 20
+                    }
+                    if data_to_patch.get("scope_type") is not None:
+                        lookup_params["scope_type"] = data_to_patch.get("scope_type")
+                    if data_to_patch.get("scope_id") is not None:
+                        lookup_params["scope_id"] = data_to_patch.get("scope_id")
+
+                    existing_cluster_data = self.request(nb_object_sub_class, params=lookup_params)
+                    existing_cluster_results = grab(existing_cluster_data, "results", fallback=list())
+
+                    if len(existing_cluster_results) == 1 and grab(existing_cluster_results, "0.id") is not None:
+                        nb_id = grab(existing_cluster_results, "0.id")
+                        req_type = "PATCH"
+                        action = "Updating existing"
+                        this_object.nb_id = nb_id
+                        this_object.is_new = False
+                        log.info(f"Found existing NetBox '{this_object.name}' object "
+                                 f"'{this_object.get_display_name()}' by name lookup. Updating it instead of "
+                                 "creating a new object.")
+                    elif len(existing_cluster_results) > 1:
+                        log.warning(f"Found multiple existing NetBox '{this_object.name}' objects for "
+                                    f"name '{data_to_patch.get('name')}'. Proceeding with regular create/update flow.")
 
                 log.info("%s NetBox '%s' object '%s' with data: %s" %
                          (action, this_object.name, this_object.get_display_name(), data_to_patch))
